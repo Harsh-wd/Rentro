@@ -1,25 +1,50 @@
 import React, { useEffect, useState } from 'react'
-import { assets, dummyMyBookingsData } from '../assets/assets'
+import { assets } from '../assets/assets'
 import Title from '../components/Title'
+import { useAppContext } from '../context/AppContext'
+import toast from 'react-hot-toast'
+import {motion} from 'motion/react'
+
 
 const MyBookings = () => {
+
+  const {axios, user,currency}= useAppContext()
+
   const [bookings,setBookings]=useState([])
-  const currency= import.meta.env.VITE_CURRENCY
 
   const fetchMyBookings = async ()=>{
-    setBookings(dummyMyBookingsData)
+    try {
+      const {data} = await axios.get('/api/bookings/user')
+      if(data.success){
+        setBookings(data.bookings)
+      }else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
   useEffect(()=>{
-    fetchMyBookings()
-  },[])
+   user && fetchMyBookings()
+  },[user])
   return (
-    <div className='px-6 md:px-16 lg:px-24 xl:px-32 2xl:px-48 mt-16 text-sm max-w-7xl'>
+    <motion.div
+    intitial ={{opacity:0,y:30}}
+    animate= {{opacity:1,y:0}}
+    transition={{duration:0.6}} 
+    className='px-6 md:px-16 lg:px-24 xl:px-32 2xl:px-48 mt-16 text-sm max-w-7xl'>
 
-    <Title title='My Bookings' SubTitle ='View and manage your all car bookings' align="left"/>
+    <Title title='My Bookings'
+     SubTitle ='View and manage your all car bookings' align="left"/>
 
     <div>
       {bookings.map((booking,index)=>(
-        <div key={booking._id} className='grid grid-cols-1 md:grid-cols-4 gap-6
+        <motion.div
+        intitial ={{opacity:0,y:20}}
+        animate= {{opacity:1,y:0}}
+        transition={{duration:0.4,delay:index * 0.1}}
+
+        key={booking._id} className='grid grid-cols-1 md:grid-cols-4 gap-6
         p-6 border border-borderColor rounded-lg mt-5 first:mt-12'>
           {/* car image + info */}
 
@@ -59,11 +84,11 @@ const MyBookings = () => {
 
           </div>
 
-        </div>
+        </motion.div>
       ))}
     </div>
 
-  </div>
+  </motion.div>
   )
 }
 
