@@ -1,17 +1,62 @@
 import React, { useEffect, useState } from 'react'
-import { assets, dummyCarData } from '../../assets/assets'
+import { assets } from '../../assets/assets'
 import Title from '../../components/owner/Title'
+import { useAppContext } from '../../context/AppContext'
+import toast from 'react-hot-toast'
 
 const ManageCars = () => {
-  const currency= import.meta.env.VITE_CURRENCY
+   const {isOwner, axios,currency} = useAppContext()
+
   const [cars,setCar]=useState([])
+
   const fetchOwnerCars=async()=>{
-    setCar(dummyCarData)
+    try {
+       const {data} = await axios.get('/api/owner/cars')
+       if(data.success){
+        setCar(data.cars)
+       }else{
+        toast.error(data.message)
+       }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  
+  const toggleAvailability=async(carId)=>{
+    try {
+       const {data} = await axios.post('/api/owner/toggle-car',{carId})
+       if(data.success){
+        toast.success(data.message)
+        fetchOwnerCars()
+       }else{
+        toast.error(data.message)
+       }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  const deleteCar=async(carId)=>{
+    try {
+      const confirm = window.confirm('Are you sure you want to delete this car ?')
+      if(!confirm) return null
+
+       const {data} = await axios.post('/api/owner/delete-car',{carId})
+       if(data.success){
+        toast.success(data.message)
+        fetchOwnerCars()
+       }else{
+        toast.error(data.message)
+       }
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
 
   useEffect(()=>{
-    fetchOwnerCars()
-  },[])
+    isOwner && fetchOwnerCars()
+  },[isOwner])
   return (
     <div className='px-4 pt-10 md:px-10 w-full'>
       <Title title="Manage Vehicle" SubTitle="View all listed vehicles,update their 
@@ -53,9 +98,11 @@ const ManageCars = () => {
                 </td>
 
                 <td className='flex items-center p-3'>
-                  <img src={car.isAvailable ? assets.eye_close_icon:assets.eye_icon}
+
+                  <img onClick={()=>toggleAvailability(car._id)} src={car.isAvailable ? assets.eye_close_icon:assets.eye_icon}
                    alt="" className='cursor-pointer' />
-                   <img src={assets.delete_icon}
+
+                   <img onClick={()=>deleteCar(car._id)} src={assets.delete_icon}
                    alt="" className='cursor-pointer' />
 
                 </td>
