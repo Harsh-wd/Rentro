@@ -1,4 +1,5 @@
 import React, { useState, useSyncExternalStore } from 'react'
+import Loader from './components/Loader';
 import Navbar from './components/Navbar'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import CarDetails from './pages/CarDetails'
@@ -20,6 +21,7 @@ const App = () => {
   const isOwnerPath=useLocation().pathname.startsWith('/owner')
   return (
     <>
+    <Loader />
     <Toaster/>
     {showLogin && <Login/> }
     
