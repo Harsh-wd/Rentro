@@ -40,7 +40,7 @@ const Cars = () => {
       if (data.success){
         setFilteredCars(data.availableCars)
         if(data.availableCars.length === 0){
-          toast('No cars available')
+          toast('No Vehicle available')
         }
         return null
       }
@@ -84,7 +84,7 @@ const Cars = () => {
       animate= {{opacity:1}}
       transition={{duration:0.5,delay:0.6}}
       className='px-6 md:px-16 lg:px-24 xl:px-32 mt-10'>
-      <p className='text-gray-500 xl:px-20 max-w-7xl mx-auto'>Showing {filteredCars.length} Cars</p>
+      <p className='text-gray-500 xl:px-20 max-w-7xl mx-auto'>Showing {filteredCars.length} Vehicles</p>
 
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-4
       xl:px-20 max-w-7xl mx-auto'>
