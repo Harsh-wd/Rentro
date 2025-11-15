@@ -1,13 +1,25 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react';
+import './Loader.css'; // Create this file or use a CSS module
+import { assets } from '../assets/assets';
 
 const Loader = () => {
-  return (
-    <div className='flex justify-center items-center h-[80vh]'>
-        <div className='animate-spin rounded-full h-14 w-14
-        border-4 border-gray-300 border-t-primary'></div>
-      
-    </div>
-  )
-}
+  const [show, setShow] = useState(true);
 
-export default Loader
+  useEffect(() => {
+    
+    const timer = setTimeout(() => setShow(false), 2600);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className="loader-overlay">
+      <div className="logo-anim">
+      <img src={assets.logo} alt="Rentro Logo" style={{ height: '70px' }} />
+      </div>
+    </div>
+  );
+};
+
+export default Loader;

@@ -1,0 +1,45 @@
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f7f9fb;    /*site's theme color */
+  z-index: 9999;
+  overflow: hidden;       /* Ensures large scaled logo never gets cropped */
+}
+
+.logo-anim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeScaleMoveSmooth 4.35s cubic-bezier(0.5, 0, 0.2, 3) forwards;
+  opacity: 0;
+  transform: scale(0.4) translateY(40px); /* Start small and slightly below center */
+}
+
+.logo-anim img,
+.logo-anim svg {
+  width: 25vw;
+  height: auto;
+  max-width: 500px;
+  max-height: 250px;
+  display: block;
+}
+
+@keyframes fadeScaleMoveSmooth {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(40px);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1) translateY(0);    /* Normal size at center */
+  }
+  100% {
+    opacity: 1;
+    transform: scale(15) translateY(-100vh); /* Huge and up, smoothly */
+  }
+}
