@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
 
+
 // Fix for Leaflet's default icon
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -17,23 +18,49 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 // End of icon fix
 
+
 const BookingMapViewer = () => {
   const { bookingId } = useParams();
-  const { socket, axios, user, navigate } = useAppContext();
+  const { socket, axios, user, navigate, fetchUser } = useAppContext();
   const [vehicleLocation, setVehicleLocation] = useState(null);
   const [status, setStatus] = useState('Connecting...');
-  const mapRef = useRef(null); // Ref to control the map
+  const [isInitialized, setIsInitialized] = useState(false); // --- NEW: Track if we've checked auth ---
+  const mapRef = useRef(null);
 
+
+  // --- NEW: Check authentication on mount ---
   useEffect(() => {
-    // Redirect if user is not logged in or socket is not ready
-    if (!user || !socket) {
+    // Check if token exists in localStorage
+    const storedToken = localStorage.getItem('token');
+    
+    if (!storedToken) {
+      // User is NOT logged in
       toast.error('Please log in to view the map.');
       navigate('/');
       return;
     }
 
+    // If user data hasn't been fetched yet, fetch it
+    if (!user && storedToken) {
+      fetchUser();
+    }
+
+    // Mark as initialized so we don't redirect again
+    setIsInitialized(true);
+  }, []);
+
+
+  // --- MAIN: Load location and set up socket listener ---
+  useEffect(() => {
+    // Don't proceed until:
+    // 1. Auth is confirmed (isInitialized = true)
+    // 2. Socket is connected
+    // 3. User data is loaded
+    if (!isInitialized || !socket || !user) {
+      return;
+    }
+
     // --- Part 1: Get Last Known Location (via HTTP) ---
-    // This runs once to get the *last saved* location, so the map isn't empty
     const fetchLastLocation = async () => {
       try {
         const { data } = await axios.get(`/api/bookings/location/${bookingId}`);
@@ -80,7 +107,17 @@ const BookingMapViewer = () => {
         socket.off('location_update');
       }
     };
-  }, [bookingId, socket, user, navigate, axios]);
+  }, [isInitialized, socket, user, bookingId, axios]);
+
+
+  // --- NEW: Show loading state while checking authentication ---
+  if (!isInitialized) {
+    return (
+      <div style={{ padding: '1rem', maxWidth: '800px', margin: 'auto', textAlign: 'center', marginTop: '2rem' }}>
+        <p>Checking authentication...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '1rem', maxWidth: '800px', margin: 'auto' }}>
@@ -100,10 +137,10 @@ const BookingMapViewer = () => {
         backgroundColor: '#f9f9f9' 
       }}>
         <MapContainer
-          center={[26.9124, 75.7873]} // Default to Jaipur :)
+          center={[26.9124, 75.7873]} // Default to Jaipur
           zoom={13}
           style={{ height: '100%', width: '100%' }}
-          ref={mapRef} // Assign the ref to the map
+          ref={mapRef}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -114,12 +151,12 @@ const BookingMapViewer = () => {
               <Popup>Vehicle's Live Location</Popup>
             </Marker>
           ) : (
-            <></> // No marker if no location yet
+            <></>
           )}
         </MapContainer>
       </div>
       <button
-        onClick={() => navigate(-1)} // Go back to the previous page
+        onClick={() => navigate(-1)}
         style={{
           width: '100%',
           padding: '12px',
@@ -139,5 +176,6 @@ const BookingMapViewer = () => {
     </div>
   );
 };
+
 
 export default BookingMapViewer;
