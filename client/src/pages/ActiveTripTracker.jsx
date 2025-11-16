@@ -21,42 +21,32 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const ActiveTripTracker = () => {
   const { bookingId } = useParams();
-  const { socket, axios, user, navigate, token, fetchUser } = useAppContext();
+  const { socket, axios, user, navigate, token } = useAppContext();
   const [currentLocation, setCurrentLocation] = useState(null);
   const [status, setStatus] = useState('Initializing tracker...');
-  const [isInitialized, setIsInitialized] = useState(false); // --- NEW: Track if we've checked auth ---
   const watchIdRef = useRef(null);
 
 
-  // --- NEW: Check authentication on mount ---
   useEffect(() => {
-    // Check if token exists in localStorage
+    // Check if user has token in localStorage
     const storedToken = localStorage.getItem('token');
     
+    // If NO token, redirect to home
     if (!storedToken) {
-      // User is NOT logged in
       toast.error('Please log in to start tracking.');
       navigate('/');
       return;
     }
 
-    // If user data hasn't been fetched yet, fetch it
-    if (!user && storedToken) {
-      fetchUser();
-    }
-
-    // Mark as initialized so we don't redirect again
-    setIsInitialized(true);
-  }, []);
+    // If we have token, proceed with tracking
+    // Don't wait for socket/user to load, they will connect in background
+  }, []); // Empty dependency array - run only once on mount
 
 
-  // --- MAIN: Start tracking only after auth is confirmed ---
+  // Start GPS tracking when socket is ready
   useEffect(() => {
-    // Don't start tracking until:
-    // 1. Auth is confirmed (isInitialized = true)
-    // 2. Socket is connected
-    // 3. User data is loaded
-    if (!isInitialized || !socket || !user) {
+    // Only start if we have socket connection
+    if (!socket) {
       return;
     }
 
@@ -71,17 +61,16 @@ const ActiveTripTracker = () => {
           const { latitude, longitude } = position.coords;
           const newLocation = { lat: latitude, lng: longitude };
 
-          // Update this component's local map
           setCurrentLocation(newLocation);
           setStatus('Live location acquired.');
 
-          // 3. Send the new location to the server via WebSocket
+          // Send location via Socket.io
           socket.emit('update_location', {
             bookingId: bookingId,
             location: newLocation,
           });
 
-          // 4. Also save the location to the database (in case owner is not online)
+          // Also save to database (fallback if owner is offline)
           axios.post('/api/bookings/location', {
             bookingId: bookingId,
             latitude: latitude,
@@ -102,23 +91,14 @@ const ActiveTripTracker = () => {
       toast.error('Geolocation is not supported by this device.');
     }
 
-    // Cleanup: Stop watching GPS when component closes
+    // Cleanup
     return () => {
       if (watchIdRef.current) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
-  }, [isInitialized, socket, user, bookingId, axios]);
+  }, [socket, bookingId, axios]);
 
-
-  // --- NEW: Show loading state while checking authentication ---
-  if (!isInitialized) {
-    return (
-      <div style={{ padding: '1rem', maxWidth: '800px', margin: 'auto', textAlign: 'center', marginTop: '2rem' }}>
-        <p>Checking authentication...</p>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: '1rem', maxWidth: '800px', margin: 'auto' }}>

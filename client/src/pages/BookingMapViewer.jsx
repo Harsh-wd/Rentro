@@ -21,46 +21,34 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const BookingMapViewer = () => {
   const { bookingId } = useParams();
-  const { socket, axios, user, navigate, fetchUser } = useAppContext();
+  const { socket, axios, user, navigate } = useAppContext();
   const [vehicleLocation, setVehicleLocation] = useState(null);
   const [status, setStatus] = useState('Connecting...');
-  const [isInitialized, setIsInitialized] = useState(false); // --- NEW: Track if we've checked auth ---
   const mapRef = useRef(null);
 
 
-  // --- NEW: Check authentication on mount ---
+  // Check authentication on mount
   useEffect(() => {
-    // Check if token exists in localStorage
     const storedToken = localStorage.getItem('token');
     
     if (!storedToken) {
-      // User is NOT logged in
       toast.error('Please log in to view the map.');
       navigate('/');
       return;
     }
 
-    // If user data hasn't been fetched yet, fetch it
-    if (!user && storedToken) {
-      fetchUser();
-    }
-
-    // Mark as initialized so we don't redirect again
-    setIsInitialized(true);
-  }, []);
+    // If we have token, proceed - don't wait for socket/user
+  }, []); // Run only once on mount
 
 
-  // --- MAIN: Load location and set up socket listener ---
+  // Fetch last location and listen for updates
   useEffect(() => {
-    // Don't proceed until:
-    // 1. Auth is confirmed (isInitialized = true)
-    // 2. Socket is connected
-    // 3. User data is loaded
-    if (!isInitialized || !socket || !user) {
+    // Only proceed if socket is ready
+    if (!socket) {
       return;
     }
 
-    // --- Part 1: Get Last Known Location (via HTTP) ---
+    // --- Part 1: Get Last Known Location ---
     const fetchLastLocation = async () => {
       try {
         const { data } = await axios.get(`/api/bookings/location/${bookingId}`);
@@ -71,7 +59,6 @@ const BookingMapViewer = () => {
           };
           setVehicleLocation(newLoc);
           setStatus('Last known location acquired.');
-          // Center the map on this location
           if (mapRef.current) {
             mapRef.current.flyTo(newLoc, 16);
           }
@@ -86,16 +73,13 @@ const BookingMapViewer = () => {
     
     fetchLastLocation();
 
-    // --- Part 2: Listen for LIVE Updates (via WebSocket) ---
-    // 1. Connect to the WebSocket room
+    // --- Part 2: Listen for LIVE Updates ---
     socket.emit('join_booking_room', bookingId);
     setStatus('Connected to live tracking service.');
 
-    // 2. LISTEN for new updates from the server
     socket.on('location_update', (location) => {
       setStatus('Live location received!');
-      setVehicleLocation(location); // location is { lat, lng }
-      // Smoothly move the map to the new location
+      setVehicleLocation(location);
       if (mapRef.current) {
         mapRef.current.flyTo(location, mapRef.current.getZoom());
       }
@@ -107,17 +91,8 @@ const BookingMapViewer = () => {
         socket.off('location_update');
       }
     };
-  }, [isInitialized, socket, user, bookingId, axios]);
+  }, [socket, bookingId, axios]);
 
-
-  // --- NEW: Show loading state while checking authentication ---
-  if (!isInitialized) {
-    return (
-      <div style={{ padding: '1rem', maxWidth: '800px', margin: 'auto', textAlign: 'center', marginTop: '2rem' }}>
-        <p>Checking authentication...</p>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: '1rem', maxWidth: '800px', margin: 'auto' }}>
@@ -137,7 +112,7 @@ const BookingMapViewer = () => {
         backgroundColor: '#f9f9f9' 
       }}>
         <MapContainer
-          center={[26.9124, 75.7873]} // Default to Jaipur
+          center={[26.9124, 75.7873]}
           zoom={13}
           style={{ height: '100%', width: '100%' }}
           ref={mapRef}
