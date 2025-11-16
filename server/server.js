@@ -14,7 +14,7 @@ import { Server } from 'socket.io';
 // --- NEW: Define your allowed origins ---
 const allowedOrigins = [
   "http://localhost:5173",
-  "httpss://rentro-liard.vercel.app" // Your new frontend URL from the screenshot
+  "https://rentro-liard.vercel.app" // Your new frontend URL from the screenshot
 ];
 
 // --- NEW: CORS configuration ---
