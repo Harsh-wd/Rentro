@@ -6,12 +6,29 @@ import userRouter from "./routes/userRoute.js";
 import ownerRouter from "./routes/ownerRoutes.js";
 import bookingRouter from "./routes/bookingRoutes.js";
 
-// --- NEW IMPORTS ---
 // Import Node's built-in 'http' module
-import { createServer } from 'http'; 
+import { createServer } from 'http';
 // Import the 'Server' class from 'socket.io'
-import { Server } from 'socket.io'; 
-// -------------------
+import { Server } from 'socket.io';
+
+// --- NEW: Define your allowed origins ---
+const allowedOrigins = [
+  "http://localhost:5173",
+  "httpss://rentro-liard.vercel.app" // Your new frontend URL from the screenshot
+];
+
+// --- NEW: CORS configuration ---
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      // Allow requests if origin is in the list or if there's no origin (like Postman)
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+// ------------------------------
 
 //Initialize Express App
 const app = express();
@@ -19,43 +36,38 @@ const app = express();
 //connect database
 await connectDB();
 
-//Middleware
-app.use(cors());
+// --- UPDATE: Use specific CORS options ---
+app.use(cors(corsOptions));
+// ------------------------------------
 app.use(express.json());
 
-// --- NEW HTTP SERVER & SOCKET.IO SETUP ---
 
-// Create an HTTP server from our Express app
+// --- HTTP SERVER & SOCKET.IO SETUP ---
 const httpServer = createServer(app);
 
-// Create a new Socket.IO server and attach it to the HTTP server
 const io = new Server(httpServer, {
   cors: {
-    // Allow connections from your local React app and your future deployed app
-    // MAKE SURE to replace 'https://your-frontend-url.com' with your Vercel URL after deployment
-    origin: ["http://localhost:5173", "https://your-frontend-url.com"],
+    // --- UPDATE: Use the same allowed origins list ---
+    origin: allowedOrigins,
+    // ------------------------------------------
     methods: ["GET", "POST"]
   }
 });
 
-// --- NEW LIVE TRACKING LOGIC ---
+// --- LIVE TRACKING LOGIC ---
 io.on('connection', (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
-  // When a user (renter or owner) joins a room to watch a booking
   socket.on('join_booking_room', (bookingId) => {
-    socket.join(bookingId); // Join a "room" named after the booking's ID
+    socket.join(bookingId);
     console.log(`User ${socket.id} joined room ${bookingId}`);
   });
 
-  // When the renter's phone sends its location
   socket.on('update_location', (data) => {
     const { bookingId, location } = data;
-    // Broadcast this location to everyone ELSE in the same room
     socket.to(bookingId).emit('location_update', location);
   });
 
-  // When a user disconnects
   socket.on('disconnect', () => {
     console.log(`User Disconnected: ${socket.id}`);
   });
@@ -71,5 +83,4 @@ app.use('/api/bookings', bookingRouter);
 
 const PORT = process.env.PORT || 3000;
 
-// --- FINAL CHANGE: Start the 'httpServer' instead of 'app' ---
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
